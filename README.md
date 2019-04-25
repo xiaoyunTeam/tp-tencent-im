@@ -9,7 +9,7 @@
 #
 #### 1、安装扩展
 ```
-composer require xiaoyun/tp-apidoc
+composer require xiaoyun/tp-tencent-im
 ```
 
 #### 2、配置文件
