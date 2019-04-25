@@ -1,7 +1,18 @@
 <?php
+/**
+ * By shuxiaoxian
+ * 接口文档：https://cloud.tencent.com/document/product/269/1520
+ * 2019年4月26日14:05:15
+ */
 
 namespace XiaoYun\Tencent;
 
+
+use XiaoYun\Tencent\lib\LoginSvc;
+use XiaoYun\Tencent\lib\Message;
+use XiaoYun\Tencent\lib\Profile;
+use XiaoYun\Tencent\lib\SignTools;
+use XiaoYun\Tencent\lib\Snsim;
 
 if (version_compare(PHP_VERSION, '5.6.0') < 0 &&
     version_compare(PHP_VERSION, '5.5.10') < 0 &&
@@ -22,6 +33,12 @@ if (version_compare(PHP_VERSION, '7.1.0') >= 0 && !in_array('secp256k1', openssl
 
 class IM
 {
+    public $config; // Config
+
+    private $site = 'https://console.tim.qq.com';  // 固定域名
+
+    private $ver = 'v4'; // 协议版本号
+
     /**
      * IM constructor.
      * @throws \Exception
@@ -29,317 +46,118 @@ class IM
     public function __construct()
     {
         if (!defined('THINK_VERSION')) {
-            $config = (array)\think\facade\Config::pull('im');
+            $this->config = (array)\think\facade\Config::pull('im');
         } else {
-            $config = (array)\think\Config::get('im');
+            $this->config = (array)\think\Config::get('im');
         }
-        if (!isset($config['private_key']) or !isset($config['public_key'])) {
+        if (!isset($this->config['private_key']) or !isset($this->config['public_key'])) {
             throw new \Exception('请配置private_key及public_key！');
         }
-        if (!openssl_pkey_get_private($config['private_key'])) {
+        if (!openssl_pkey_get_private($this->config['private_key'])) {
             throw new \Exception(openssl_error_string());
         }
-        if (!openssl_pkey_get_public($config['public_key'])) {
+        if (!openssl_pkey_get_public($this->config['public_key'])) {
             throw new \Exception(openssl_error_string());
         }
     }
 
     /**
-     * @return mixed
+     * 获取配置详情
+     * @param $name
+     * @return array|mixed
      */
-    private static function config($x = null)
+    public static function getConfig($name)
     {
         if (!defined('THINK_VERSION')) {
             $config = (array)\think\facade\Config::pull('im');
         } else {
             $config = (array)\think\Config::get('im');
         }
-        return $x ? $config[$x] : $config;
+        return $name ? $config[$name] : $config;
     }
 
     /**
-     * @param $identifier 用户名
-     * @param $userbuf
-     * @param int $expire 超时时间
-     * @return string 生成的UserSig 失败时为false
+     * 签名工具
+     * @return SignTools
      * @throws \Exception
      */
-    public static function genSignWithUserbuf($identifier, $userbuf, $expire = 15552000)
+    public static function sign()
     {
-        $json = Array(
-            'TLS.account_type' => '0',
-            'TLS.identifier' => (string)$identifier,
-            'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)self::config('SDKAppid'),
-            'TLS.expire_after' => (string)$expire,
-            'TLS.version' => '201512300000',
-            'TLS.time' => (string)time(),
-            'TLS.userbuf' => base64_encode($userbuf)
-        );
-        $err = '';
-        $content = self::genSignnContentWithUserbuf($json, $err);
-        $signature = self::sign($content, $err);
-        $json['TLS.sig'] = base64_encode($signature);
-        if ($json['TLS.sig'] === false) {
-            throw new \Exception('base64_encode error');
-        }
-        $json_text = json_encode($json);
-        if ($json_text === false) {
-            throw new \Exception('json_encode error');
-        }
-        $compressed = gzcompress($json_text);
-        if ($compressed === false) {
-            throw new \Exception('gzcompress error');
-        }
-        return self::base64Encode($compressed);
+        return new SignTools();
     }
 
     /**
-     * 验证usersig
-     * @param type $sig usersig
-     * @param type $identifier 需要验证用户名
-     * @param type $init_time usersig中的生成时间
-     * @param type $expire_time usersig中的有效期 如：3600秒
-     * @param type $error_msg 失败时的错误信息
-     * @return boolean 验证是否成功
+     * 帐号管理
+     * @return LoginSvc
+     * @throws \Exception
      */
-    public static function verifySigWithUserbuf($sig, $identifier, &$init_time, &$expire_time, &$userbuf, &$error_msg)
+    public static function loginSvc()
     {
-        try {
-            $error_msg = '';
-            $decoded_sig = self::base64Decode($sig);
-            $uncompressed_sig = gzuncompress($decoded_sig);
-            if ($uncompressed_sig === false) {
-                throw new \Exception('gzuncompress error');
-            }
-            $json = json_decode($uncompressed_sig);
-            if ($json == false) {
-                throw new \Exception('json_decode error');
-            }
-            $json = (array)$json;
-            if ($json['TLS.identifier'] !== $identifier) {
-                throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
-            }
-            if ($json['TLS.sdk_appid'] != self::config('SDKAppid')) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('SDKAppid') . "}");
-            }
-            $content = self::genSignnContentWithUserbuf($json);
-            $signature = base64_decode($json['TLS.sig']);
-            if ($signature == false) {
-                throw new \Exception('sig json_decode error');
-            }
-            $succ = self::verify($content, $signature);
-            if (!$succ) {
-                throw new \Exception('verify failed');
-            }
-            $init_time = $json['TLS.time'];
-            $expire_time = $json['TLS.expire_after'];
-            $userbuf = base64_decode($json['TLS.userbuf']);
-            return true;
-        } catch (\Exception $ex) {
-            $error_msg = $ex->getMessage();
-            return false;
-        }
+        return new LoginSvc();
     }
 
     /**
-     * 用于url的base64encode
-     * '+' => '*', '/' => '-', '=' => '_'
-     * @param string $string 需要编码的数据
-     * @return string 编码后的base64串，失败返回false
+     * 在线状态
      */
-    private static function base64Encode($string)
+    public static function queryState()
     {
-        static $replace = Array('+' => '*', '/' => '-', '=' => '_');
-        $base64 = base64_encode($string);
-        if ($base64 === false) {
-            throw new \Exception('base64_encode error');
-        }
-        return str_replace(array_keys($replace), array_values($replace), $base64);
+
     }
 
     /**
-     * 用于url的base64decode
-     * '+' => '*', '/' => '-', '=' => '_'
-     * @param string $base64 需要解码的base64串
-     * @return string 解码后的数据，失败返回false
+     * 资料管理
+     * @return Profile
+     * @throws \Exception
      */
-    private static function base64Decode($base64)
+    public static function profile()
     {
-        static $replace = Array('+' => '*', '/' => '-', '=' => '_');
-        $string = str_replace(array_values($replace), array_keys($replace), $base64);
-        $result = base64_decode($string);
-        if ($result == false) {
-            throw new \Exception('base64_decode error');
-        }
-        return $result;
+        return new Profile();
     }
 
     /**
-     * 根据json内容生成需要签名的buf串
-     * @param array $json 票据json对象
-     * @return string 按标准格式生成的用于签名的字符串
-     * 失败时返回false
+     * 关系链管理
+     * @return Snsim
+     * @throws \Exception
      */
-    private static function genSignnContent(array $json)
+    public static function sns()
     {
-        $content = '';
-        static $aid3rd = 'TLS.appid_at_3rd';
-        if (isset($json[$aid3rd])) {
-            $content .= "{$aid3rd}:{$json[$aid3rd]}\n";
-        }
-        static $members = Array(
-            'TLS.account_type',
-            'TLS.identifier',
-            'TLS.sdk_appid',
-            'TLS.time',
-            'TLS.expire_after'
-        );
-        foreach ($members as $member) {
-            if (!isset($json[$member])) {
-                throw new \Exception('json need ' . $member);
-            }
-            $content .= "{$member}:{$json[$member]}\n";
-        }
-        return $content;
+        return new Snsim();
     }
 
     /**
-     * ECDSA-SHA256签名
-     * @param string $data 需要签名的数据
-     * @return string 返回签名 失败时返回false
+     * 单聊消息
+     * @return Message
+     * @throws \Exception
      */
-    private static function sign($data)
+    public static function openim()
     {
-        $signature = '';
-        if (!openssl_sign($data, $signature, self::config('private_key'), 'sha256')) {
-            throw new \Exception(openssl_error_string());
-        }
-        return $signature;
+        return new Message();
     }
 
     /**
-     * 验证ECDSA-SHA256签名
-     * @param string $data 需要验证的数据原文
-     * @param string $sig 需要验证的签名
-     * @return int 1验证成功 0验证失败
+     * 统一请求HTTPS客户端
+     * @param $uri
+     * @param $query
+     * @param $servicename
+     * @param $command
+     * @param string $contenttype
+     * @throws \Exception
      */
-    private static function verify($data, $sig)
+    public function httpsClient($servicename, $command, $query, $contenttype = 'json')
     {
-        $ret = openssl_verify($data, $sig, self::config('public_key'), 'sha256');
-        if ($ret == -1) {
-            throw new \Exception(openssl_error_string());
+        if (empty($identifier)) {
+            throw new \Exception('请配置rootAccount管理员账号！');
         }
-        return $ret;
-    }
+        $sdkappid = $this->config['SDKAppid'];
+        $identifier = $this->config['rootAccount']; // App 管理员帐号
+        $tools = new SignTools();
+        $usersig = $tools->genSign($identifier);  // 管理员帐号生成的签名
+        $random = rand(10000000001000000000100000000000, 99999999999999999999999999999999); // 32位无符号整数
+        $client = new \Guz | zleHttp\Client(['base_uri' => $this->site]);
+        $response = $client->request('POST', '/' . $servicename . '/' . $command, [
+            'json' => $query
+        ]);
 
-    /**
-     * 生成usersig
-     * @param string $identifier 用户名
-     * @param uint $expire usersig有效期 默认为180天
-     * @return string 生成的UserSig 失败时为false
-     */
-    public static function genSign($identifier, $expire = 15552000)
-    {
-        $json = Array(
-            'TLS.account_type' => '0',
-            'TLS.identifier' => (string)$identifier,
-            'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)self::config('SDKAppid'),
-            'TLS.expire_after' => (string)$expire,
-            'TLS.version' => '201512300000',
-            'TLS.time' => (string)time()
-        );
-        $err = '';
-        $content = self::genSignnContent($json, $err);
-        $signature = self::sign($content, $err);
-        $json['TLS.sig'] = base64_encode($signature);
-        if ($json['TLS.sig'] === false) {
-            throw new \Exception('base64_encode error');
-        }
-        $json_text = json_encode($json);
-        if ($json_text === false) {
-            throw new \Exception('json_encode error');
-        }
-        $compressed = gzcompress($json_text);
-        if ($compressed === false) {
-            throw new \Exception('gzcompress error');
-        }
-        return self::base64Encode($compressed);
-    }
-
-    /**
-     * 验证usersig
-     * @param type $sig usersig
-     * @param type $identifier 需要验证用户名
-     * @param type $init_time usersig中的生成时间
-     * @param type $expire_time usersig中的有效期 如：3600秒
-     * @param type $error_msg 失败时的错误信息
-     * @return boolean 验证是否成功
-     */
-    public static function verifySig($sig, $identifier, &$init_time, &$expire_time, &$error_msg)
-    {
-        try {
-            $error_msg = '';
-            $decoded_sig = self::base64Decode($sig);
-            $uncompressed_sig = gzuncompress($decoded_sig);
-            if ($uncompressed_sig === false) {
-                throw new \Exception('gzuncompress error');
-            }
-            $json = json_decode($uncompressed_sig);
-            if ($json == false) {
-                throw new \Exception('json_decode error');
-            }
-            $json = (array)$json;
-            if ($json['TLS.identifier'] !== $identifier) {
-                throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
-            }
-            if ($json['TLS.sdk_appid'] != self::config('SDKAppid')) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('SDKAppid') . "}");
-            }
-            $content = self::genSignnContent($json);
-            $signature = base64_decode($json['TLS.sig']);
-            if ($signature == false) {
-                throw new \Exception('sig json_decode error');
-            }
-            $succ = self::verify($content, $signature);
-            if (!$succ) {
-                throw new \Exception('verify failed');
-            }
-            $init_time = $json['TLS.time'];
-            $expire_time = $json['TLS.expire_after'];
-            return true;
-        } catch (\Exception $ex) {
-            $error_msg = $ex->getMessage();
-            return false;
-        }
-    }
-
-    /**
-     * 根据json内容生成需要签名的buf串
-     * @param array $json 票据json对象
-     * @return string 按标准格式生成的用于签名的字符串
-     * 失败时返回false
-     */
-    private static function genSignnContentWithUserbuf(array $json)
-    {
-        static $members = Array(
-            'TLS.appid_at_3rd',
-            'TLS.account_type',
-            'TLS.identifier',
-            'TLS.sdk_appid',
-            'TLS.time',
-            'TLS.expire_after',
-            'TLS.userbuf'
-        );
-        $content = '';
-        foreach ($members as $member) {
-            if (!isset($json[$member])) {
-                throw new \Exception('json need ' . $member);
-            }
-            $content .= "{$member}:{$json[$member]}\n";
-        }
-        return $content;
     }
 
 }

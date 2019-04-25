@@ -11,8 +11,12 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "XiaoYun\\Tencent\\": "src"
+            "XiaoYun\\Tencent\\": "src",
+            "XiaoYun\\Tencent\\lib\\": "src/lib"
         }
+    },
+    "require": {
+        "guzzlehttp/guzzle": "^6.2"
     },
     "extra": {
         "think-config": {
