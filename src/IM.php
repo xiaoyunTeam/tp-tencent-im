@@ -1,9 +1,7 @@
 <?php
 
+namespace XiaoYun\Tentcent;
 
-namespace XiaoYun;
-
-use Api\Doc\Doc;
 
 if (version_compare(PHP_VERSION, '5.6.0') < 0 &&
     version_compare(PHP_VERSION, '5.5.10') < 0 &&
@@ -22,13 +20,12 @@ if (version_compare(PHP_VERSION, '7.1.0') >= 0 && !in_array('secp256k1', openssl
 }
 
 
-class TLSSigAPI
+class IM
 {
-
-    private $private_key = false;
-    private $public_key = false;
-    private $appid = 0;
-
+    /**
+     * IM constructor.
+     * @throws \Exception
+     */
     public function __construct()
     {
         if (!defined('THINK_VERSION')) {
@@ -36,44 +33,118 @@ class TLSSigAPI
         } else {
             $config = \think\Config::get('im');
         }
-        $this->private_key = $config[''];
-    }
-
-    /**
-     * 设置Appid
-     * @param type $appid
-     */
-    public function setAppid($appid)
-    {
-        $this->appid = $appid;
-    }
-
-    /**
-     * 设置私钥 如果要生成usersig则需要私钥
-     * @param string $private_key 私钥文件内容
-     * @return bool 是否成功
-     */
-    public function setPrivateKey($private_key)
-    {
-        $this->private_key = openssl_pkey_get_private($private_key);
-        if ($this->private_key === false) {
+        if (!isset($config['private_key']) or !isset($config['public_key'])) {
+            throw new \Exception('请配置private_key及public_key！');
+        }
+        if (!openssl_pkey_get_private($config['private_key'])) {
             throw new \Exception(openssl_error_string());
         }
-        return true;
+        if (!openssl_pkey_get_public($config['public_key'])) {
+            throw new \Exception(openssl_error_string());
+        }
+    }
+
+    public static function getAccountType()
+    {
+
     }
 
     /**
-     * 设置公钥 如果要验证usersig则需要公钥
-     * @param string $public_key 公钥文件内容
-     * @return bool 是否成功
+     * @return mixed
      */
-    public function setPublicKey($public_key)
+    private static function config($x = null)
     {
-        $this->public_key = openssl_pkey_get_public($public_key);
-        if ($this->public_key === false) {
-            throw new \Exception(openssl_error_string());
+        if (!defined('THINK_VERSION')) {
+            $config = \think\facade\Config::pull('im');
+        } else {
+            $config = \think\Config::get('im');
         }
-        return true;
+        return $x ? $config[$x] : $config;
+    }
+
+    /**
+     * @param $identifier 用户名
+     * @param $userbuf
+     * @param int $expire 超时时间
+     * @return string 生成的UserSig 失败时为false
+     * @throws \Exception
+     */
+    public static function genSigWithUserbuf($identifier, $userbuf, $expire = 15552000)
+    {
+        $json = Array(
+            'TLS.account_type' => '0',
+            'TLS.identifier' => (string)$identifier,
+            'TLS.appid_at_3rd' => '0',
+            'TLS.sdk_appid' => (string)self::config('appid'),
+            'TLS.expire_after' => (string)$expire,
+            'TLS.version' => '201512300000',
+            'TLS.time' => (string)time(),
+            'TLS.userbuf' => base64_encode($userbuf)
+        );
+        $err = '';
+        $content = self::genSignContentWithUserbuf($json, $err);
+        $signature = self::sign($content, $err);
+        $json['TLS.sig'] = base64_encode($signature);
+        if ($json['TLS.sig'] === false) {
+            throw new \Exception('base64_encode error');
+        }
+        $json_text = json_encode($json);
+        if ($json_text === false) {
+            throw new \Exception('json_encode error');
+        }
+        $compressed = gzcompress($json_text);
+        if ($compressed === false) {
+            throw new \Exception('gzcompress error');
+        }
+        return self::base64Encode($compressed);
+    }
+
+    /**
+     * 验证usersig
+     * @param type $sig usersig
+     * @param type $identifier 需要验证用户名
+     * @param type $init_time usersig中的生成时间
+     * @param type $expire_time usersig中的有效期 如：3600秒
+     * @param type $error_msg 失败时的错误信息
+     * @return boolean 验证是否成功
+     */
+    public static function verifySigWithUserbuf($sig, $identifier, &$init_time, &$expire_time, &$userbuf, &$error_msg)
+    {
+        try {
+            $error_msg = '';
+            $decoded_sig = self::base64Decode($sig);
+            $uncompressed_sig = gzuncompress($decoded_sig);
+            if ($uncompressed_sig === false) {
+                throw new \Exception('gzuncompress error');
+            }
+            $json = json_decode($uncompressed_sig);
+            if ($json == false) {
+                throw new \Exception('json_decode error');
+            }
+            $json = (array)$json;
+            if ($json['TLS.identifier'] !== $identifier) {
+                throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
+            }
+            if ($json['TLS.sdk_appid'] != self::config('appid')) {
+                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
+            }
+            $content = self::genSignContentWithUserbuf($json);
+            $signature = base64_decode($json['TLS.sig']);
+            if ($signature == false) {
+                throw new \Exception('sig json_decode error');
+            }
+            $succ = self::verify($content, $signature);
+            if (!$succ) {
+                throw new \Exception('verify failed');
+            }
+            $init_time = $json['TLS.time'];
+            $expire_time = $json['TLS.expire_after'];
+            $userbuf = base64_decode($json['TLS.userbuf']);
+            return true;
+        } catch (\Exception $ex) {
+            $error_msg = $ex->getMessage();
+            return false;
+        }
     }
 
     /**
@@ -82,7 +153,7 @@ class TLSSigAPI
      * @param string $string 需要编码的数据
      * @return string 编码后的base64串，失败返回false
      */
-    private function base64Encode($string)
+    private static function base64Encode($string)
     {
         static $replace = Array('+' => '*', '/' => '-', '=' => '_');
         $base64 = base64_encode($string);
@@ -98,7 +169,7 @@ class TLSSigAPI
      * @param string $base64 需要解码的base64串
      * @return string 解码后的数据，失败返回false
      */
-    private function base64Decode($base64)
+    private static function base64Decode($base64)
     {
         static $replace = Array('+' => '*', '/' => '-', '=' => '_');
         $string = str_replace(array_values($replace), array_keys($replace), $base64);
@@ -115,7 +186,7 @@ class TLSSigAPI
      * @return string 按标准格式生成的用于签名的字符串
      * 失败时返回false
      */
-    private function genSignContent(array $json)
+    private static function genSignContent(array $json)
     {
         $content = '';
         static $aid3rd = 'TLS.appid_at_3rd';
@@ -143,10 +214,10 @@ class TLSSigAPI
      * @param string $data 需要签名的数据
      * @return string 返回签名 失败时返回false
      */
-    private function sign($data)
+    private static function sign($data)
     {
         $signature = '';
-        if (!openssl_sign($data, $signature, $this->private_key, 'sha256')) {
+        if (!openssl_sign($data, $signature, self::config('private_key'), 'sha256')) {
             throw new \Exception(openssl_error_string());
         }
         return $signature;
@@ -158,9 +229,9 @@ class TLSSigAPI
      * @param string $sig 需要验证的签名
      * @return int 1验证成功 0验证失败
      */
-    private function verify($data, $sig)
+    private static function verify($data, $sig)
     {
-        $ret = openssl_verify($data, $sig, $this->public_key, 'sha256');
+        $ret = openssl_verify($data, $sig, self::config('private_key'), 'sha256');
         if ($ret == -1) {
             throw new \Exception(openssl_error_string());
         }
@@ -173,20 +244,20 @@ class TLSSigAPI
      * @param uint $expire usersig有效期 默认为180天
      * @return string 生成的UserSig 失败时为false
      */
-    public function genSig($identifier, $expire = 15552000)
+    public static function genSig($identifier, $expire = 15552000)
     {
         $json = Array(
             'TLS.account_type' => '0',
             'TLS.identifier' => (string)$identifier,
             'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)$this->appid,
+            'TLS.sdk_appid' => (string)self::config('appid'),
             'TLS.expire_after' => (string)$expire,
             'TLS.version' => '201512300000',
             'TLS.time' => (string)time()
         );
         $err = '';
-        $content = $this->genSignContent($json, $err);
-        $signature = $this->sign($content, $err);
+        $content = self::genSignContent($json, $err);
+        $signature = self::sign($content, $err);
         $json['TLS.sig'] = base64_encode($signature);
         if ($json['TLS.sig'] === false) {
             throw new \Exception('base64_encode error');
@@ -199,7 +270,7 @@ class TLSSigAPI
         if ($compressed === false) {
             throw new \Exception('gzcompress error');
         }
-        return $this->base64Encode($compressed);
+        return self::base64Encode($compressed);
     }
 
     /**
@@ -211,11 +282,11 @@ class TLSSigAPI
      * @param type $error_msg 失败时的错误信息
      * @return boolean 验证是否成功
      */
-    public function verifySig($sig, $identifier, &$init_time, &$expire_time, &$error_msg)
+    public static function verifySig($sig, $identifier, &$init_time, &$expire_time, &$error_msg)
     {
         try {
             $error_msg = '';
-            $decoded_sig = $this->base64Decode($sig);
+            $decoded_sig = self::base64Decode($sig);
             $uncompressed_sig = gzuncompress($decoded_sig);
             if ($uncompressed_sig === false) {
                 throw new \Exception('gzuncompress error');
@@ -228,15 +299,15 @@ class TLSSigAPI
             if ($json['TLS.identifier'] !== $identifier) {
                 throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
             }
-            if ($json['TLS.sdk_appid'] != $this->appid) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{$this->appid}");
+            if ($json['TLS.sdk_appid'] != self::config('appid')) {
+                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
             }
-            $content = $this->genSignContent($json);
+            $content = self::genSignContent($json);
             $signature = base64_decode($json['TLS.sig']);
             if ($signature == false) {
                 throw new \Exception('sig json_decode error');
             }
-            $succ = $this->verify($content, $signature);
+            $succ = self::verify($content, $signature);
             if (!$succ) {
                 throw new \Exception('verify failed');
             }
@@ -255,7 +326,7 @@ class TLSSigAPI
      * @return string 按标准格式生成的用于签名的字符串
      * 失败时返回false
      */
-    private function genSignContentWithUserbuf(array $json)
+    private static function genSignContentWithUserbuf(array $json)
     {
         static $members = Array(
             'TLS.appid_at_3rd',
@@ -274,90 +345,6 @@ class TLSSigAPI
             $content .= "{$member}:{$json[$member]}\n";
         }
         return $content;
-    }
-
-    /**
-     * 生成usersig
-     * @param string $identifier 用户名
-     * @param uint $expire usersig有效期 默认为180天
-     * @return string 生成的UserSig 失败时为false
-     */
-    public function genSigWithUserbuf($identifier, $userbuf, $expire = 15552000)
-    {
-        $json = Array(
-            'TLS.account_type' => '0',
-            'TLS.identifier' => (string)$identifier,
-            'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)$this->appid,
-            'TLS.expire_after' => (string)$expire,
-            'TLS.version' => '201512300000',
-            'TLS.time' => (string)time(),
-            'TLS.userbuf' => base64_encode($userbuf)
-        );
-        $err = '';
-        $content = $this->genSignContentWithUserbuf($json, $err);
-        $signature = $this->sign($content, $err);
-        $json['TLS.sig'] = base64_encode($signature);
-        if ($json['TLS.sig'] === false) {
-            throw new \Exception('base64_encode error');
-        }
-        $json_text = json_encode($json);
-        if ($json_text === false) {
-            throw new \Exception('json_encode error');
-        }
-        $compressed = gzcompress($json_text);
-        if ($compressed === false) {
-            throw new \Exception('gzcompress error');
-        }
-        return $this->base64Encode($compressed);
-    }
-
-    /**
-     * 验证usersig
-     * @param type $sig usersig
-     * @param type $identifier 需要验证用户名
-     * @param type $init_time usersig中的生成时间
-     * @param type $expire_time usersig中的有效期 如：3600秒
-     * @param type $error_msg 失败时的错误信息
-     * @return boolean 验证是否成功
-     */
-    public function verifySigWithUserbuf($sig, $identifier, &$init_time, &$expire_time, &$userbuf, &$error_msg)
-    {
-        try {
-            $error_msg = '';
-            $decoded_sig = $this->base64Decode($sig);
-            $uncompressed_sig = gzuncompress($decoded_sig);
-            if ($uncompressed_sig === false) {
-                throw new \Exception('gzuncompress error');
-            }
-            $json = json_decode($uncompressed_sig);
-            if ($json == false) {
-                throw new \Exception('json_decode error');
-            }
-            $json = (array)$json;
-            if ($json['TLS.identifier'] !== $identifier) {
-                throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
-            }
-            if ($json['TLS.sdk_appid'] != $this->appid) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{$this->appid}");
-            }
-            $content = $this->genSignContentWithUserbuf($json);
-            $signature = base64_decode($json['TLS.sig']);
-            if ($signature == false) {
-                throw new \Exception('sig json_decode error');
-            }
-            $succ = $this->verify($content, $signature);
-            if (!$succ) {
-                throw new \Exception('verify failed');
-            }
-            $init_time = $json['TLS.time'];
-            $expire_time = $json['TLS.expire_after'];
-            $userbuf = base64_decode($json['TLS.userbuf']);
-            return true;
-        } catch (\Exception $ex) {
-            $error_msg = $ex->getMessage();
-            return false;
-        }
     }
 
 }
