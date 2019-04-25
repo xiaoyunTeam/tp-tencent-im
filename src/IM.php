@@ -69,7 +69,7 @@ class IM
      * @return string 生成的UserSig 失败时为false
      * @throws \Exception
      */
-    public static function genSigWithUserbuf($identifier, $userbuf, $expire = 15552000)
+    public static function genSignWithUserbuf($identifier, $userbuf, $expire = 15552000)
     {
         $json = Array(
             'TLS.account_type' => '0',
@@ -82,7 +82,7 @@ class IM
             'TLS.userbuf' => base64_encode($userbuf)
         );
         $err = '';
-        $content = self::genSignContentWithUserbuf($json, $err);
+        $content = self::genSignnContentWithUserbuf($json, $err);
         $signature = self::sign($content, $err);
         $json['TLS.sig'] = base64_encode($signature);
         if ($json['TLS.sig'] === false) {
@@ -128,7 +128,7 @@ class IM
             if ($json['TLS.sdk_appid'] != self::config('appid')) {
                 throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
             }
-            $content = self::genSignContentWithUserbuf($json);
+            $content = self::genSignnContentWithUserbuf($json);
             $signature = base64_decode($json['TLS.sig']);
             if ($signature == false) {
                 throw new \Exception('sig json_decode error');
@@ -186,7 +186,7 @@ class IM
      * @return string 按标准格式生成的用于签名的字符串
      * 失败时返回false
      */
-    private static function genSignContent(array $json)
+    private static function genSignnContent(array $json)
     {
         $content = '';
         static $aid3rd = 'TLS.appid_at_3rd';
@@ -244,7 +244,7 @@ class IM
      * @param uint $expire usersig有效期 默认为180天
      * @return string 生成的UserSig 失败时为false
      */
-    public static function genSig($identifier, $expire = 15552000)
+    public static function genSign($identifier, $expire = 15552000)
     {
         $json = Array(
             'TLS.account_type' => '0',
@@ -256,7 +256,7 @@ class IM
             'TLS.time' => (string)time()
         );
         $err = '';
-        $content = self::genSignContent($json, $err);
+        $content = self::genSignnContent($json, $err);
         $signature = self::sign($content, $err);
         $json['TLS.sig'] = base64_encode($signature);
         if ($json['TLS.sig'] === false) {
@@ -302,7 +302,7 @@ class IM
             if ($json['TLS.sdk_appid'] != self::config('appid')) {
                 throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
             }
-            $content = self::genSignContent($json);
+            $content = self::genSignnContent($json);
             $signature = base64_decode($json['TLS.sig']);
             if ($signature == false) {
                 throw new \Exception('sig json_decode error');
@@ -326,7 +326,7 @@ class IM
      * @return string 按标准格式生成的用于签名的字符串
      * 失败时返回false
      */
-    private static function genSignContentWithUserbuf(array $json)
+    private static function genSignnContentWithUserbuf(array $json)
     {
         static $members = Array(
             'TLS.appid_at_3rd',

@@ -6,26 +6,36 @@
 composer require xiaoyun/tp-apidoc
 ```
 
-#### 2、调用接口
+#### 2、配置文件
 - 5.0安装好扩展后在 application\extra\ 文件夹下会生成 im.php 配置文件
 - 5.1安装好扩展后在 application\config\ 文件夹下会生成 im.php 配置文件
 - 在im.php中配置
 ```
-    'controller' => [
-        //  需要生成文档的类 如 'app\index\controller\index'
-        'app\index\controller\index'
-    ]
+    return [
+        'SDKAppid' => '',  // 填入创建腾讯云通讯应用获取到的 sdkappid
+        'accountType' => '', // 填入在帐号体系集成配置中获取到的 accountType 前端使用
+        'private_key' => '', // 设置私钥 如果要生成usersig则需要私钥
+        'public_key' => '', // 设置公钥 如果要验证usersig则需要公钥
+    ];
+    
 ```
 #### 3、默认过期时间
 ```
-   $api = new Tencent\TLSSigAPI();
-   $api->SetAppid(140000000);
-   $private = file_get_contents(dirname(__FILE__).DIRECTORY_SEPARATOR.'private_key');
-   $api->SetPrivateKey($private);
-   $sig = $api->genSig('xiaojun');
-   var_export($sig);
+   use XiaoYun\Tentcent\IM;
+   
+   $user = 'xiaoyun01';
+   $sign = IM::genSign($user);
+   var_export($sign);
 ```
-#### 4、在浏览器访问http://你的域名/doc 或者 http://你的域名/index.php/doc 查看接口文档
+
+#### 4、指定过期时间
+```
+   use XiaoYun\Tentcent\IM;
+   
+   $user = 'xiaoyun02';
+   $sign = IM::genSignWithUserbuf($user);
+   var_export($sign);
+```
 
 ### 更多支持 xiaoyun.studio
 
