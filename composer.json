@@ -11,7 +11,7 @@
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "XiaoYun\\Tentcent": "src"
+            "XiaoYun\\Tencent": "src"
         }
     },
     "extra": {
