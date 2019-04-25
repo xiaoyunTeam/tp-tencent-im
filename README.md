@@ -31,7 +31,7 @@ composer require xiaoyun/tp-tencent-im
    
    $user = 'xiaoyun01';
    $sign = IM::genSign($user);
-   var_export($sign);
+   return $sign;
 ```
 
 #### 4、指定过期时间
@@ -40,7 +40,7 @@ composer require xiaoyun/tp-tencent-im
    
    $user = 'xiaoyun02';
    $sign = IM::genSignWithUserbuf($user);
-   var_export($sign);
+   return $sign;
 ```
 
 ### 更多支持 xiaoyun.studio

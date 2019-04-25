@@ -75,7 +75,7 @@ class IM
             'TLS.account_type' => '0',
             'TLS.identifier' => (string)$identifier,
             'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)self::config('appid'),
+            'TLS.sdk_appid' => (string)self::config('SDKAppid'),
             'TLS.expire_after' => (string)$expire,
             'TLS.version' => '201512300000',
             'TLS.time' => (string)time(),
@@ -125,8 +125,8 @@ class IM
             if ($json['TLS.identifier'] !== $identifier) {
                 throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
             }
-            if ($json['TLS.sdk_appid'] != self::config('appid')) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
+            if ($json['TLS.sdk_appid'] != self::config('SDKAppid')) {
+                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('SDKAppid') . "}");
             }
             $content = self::genSignnContentWithUserbuf($json);
             $signature = base64_decode($json['TLS.sig']);
@@ -231,7 +231,7 @@ class IM
      */
     private static function verify($data, $sig)
     {
-        $ret = openssl_verify($data, $sig, self::config('private_key'), 'sha256');
+        $ret = openssl_verify($data, $sig, self::config('public_key'), 'sha256');
         if ($ret == -1) {
             throw new \Exception(openssl_error_string());
         }
@@ -250,7 +250,7 @@ class IM
             'TLS.account_type' => '0',
             'TLS.identifier' => (string)$identifier,
             'TLS.appid_at_3rd' => '0',
-            'TLS.sdk_appid' => (string)self::config('appid'),
+            'TLS.sdk_appid' => (string)self::config('SDKAppid'),
             'TLS.expire_after' => (string)$expire,
             'TLS.version' => '201512300000',
             'TLS.time' => (string)time()
@@ -299,8 +299,8 @@ class IM
             if ($json['TLS.identifier'] !== $identifier) {
                 throw new \Exception("identifier error sigid:{$json['TLS.identifier']} id:{$identifier}");
             }
-            if ($json['TLS.sdk_appid'] != self::config('appid')) {
-                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('appid') . "}");
+            if ($json['TLS.sdk_appid'] != self::config('SDKAppid')) {
+                throw new \Exception("appid error sigappid:{$json['TLS.appid']} thisappid:{" . self::config('SDKAppid') . "}");
             }
             $content = self::genSignnContent($json);
             $signature = base64_decode($json['TLS.sig']);
