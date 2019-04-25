@@ -29,9 +29,9 @@ class IM
     public function __construct()
     {
         if (!defined('THINK_VERSION')) {
-            $config = \think\facade\Config::pull('im');
+            $config = (array)\think\facade\Config::pull('im');
         } else {
-            $config = \think\Config::get('im');
+            $config = (array)\think\Config::get('im');
         }
         if (!isset($config['private_key']) or !isset($config['public_key'])) {
             throw new \Exception('请配置private_key及public_key！');
@@ -55,9 +55,9 @@ class IM
     private static function config($x = null)
     {
         if (!defined('THINK_VERSION')) {
-            $config = \think\facade\Config::pull('im');
+            $config = (array)\think\facade\Config::pull('im');
         } else {
-            $config = \think\Config::get('im');
+            $config = (array)\think\Config::get('im');
         }
         return $x ? $config[$x] : $config;
     }
