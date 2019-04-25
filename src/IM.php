@@ -1,6 +1,6 @@
 <?php
 
-namespace XiaoYun\Tencent;
+namespace xiaoyun\Tencent;
 
 
 if (version_compare(PHP_VERSION, '5.6.0') < 0 &&
