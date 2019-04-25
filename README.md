@@ -27,7 +27,7 @@ composer require xiaoyun/tp-tencent-im
 ```
 #### 3、默认过期时间
 ```
-   use XiaoYun\Tentcent\IM;
+   use XiaoYun\Tencent\IM;
    
    $user = 'xiaoyun01';
    $sign = IM::genSign($user);
@@ -36,7 +36,7 @@ composer require xiaoyun/tp-tencent-im
 
 #### 4、指定过期时间
 ```
-   use XiaoYun\Tentcent\IM;
+   use XiaoYun\Tencent\IM;
    
    $user = 'xiaoyun02';
    $sign = IM::genSignWithUserbuf($user);
