@@ -1,4 +1,8 @@
 <?php
+/*
+ * By xiaoyun.studio Chrome
+ */
+
 if(defined('THINK_VERSION')){
     \think\Route::get('doc/assets', "\\Api\\Doc\\DocController@assets",['deny_ext'=>'php|.htacess']);
     \think\Route::get('doc/search', "\\Api\\Doc\\DocController@search");
@@ -69,15 +73,4 @@ function http_request($url, $cookie, $data = array(), $method = array(), $header
     $output = curl_exec($curl);
     curl_close($curl);
     return $output;
-}
-
-/**
- * array_column
- */
-if(!function_exists("array_column"))
-{
-    function array_column($array,$column_name)
-    {
-        return array_map(function($element) use($column_name){return $element[$column_name];}, $array);
-    }
 }

@@ -1,6 +1,6 @@
 {
-    "name": "xiaoyun/tp-apidoc",
-    "description": "The ThinkPHP5 Api Doc Package.",
+    "name": "xiaoyun/tp-tencent-im",
+    "description": "The ThinkPHP5 Tencent IM Service Package.",
     "type": "think-extend",
     "authors": [
         {
@@ -23,7 +23,7 @@
     },
     "extra": {
         "think-config": {
-            "doc": "src/config.php"
+            "im": "src/config.php"
         }
     },
     "config": {

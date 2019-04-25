@@ -1,9 +1,7 @@
 <?php
 return [
-    'title' => "API接口文档",  //文档title
-    'password' => '', //访问密码，为空不需要密码
-    //静态资源路径--默认为云上路径，解决很多人nginx配置问题
-    //可将assets目录拷贝到public下面，具体路径课自行配置
+    'SDKAppid' => "xxx",  // 填入创建腾讯云通讯应用获取到的 sdkappid
+    'accountType' => 'xxx', // 填入在帐号体系集成配置中获取到的 accountType
     'static_path' => '',
     'controller' => [
         //  需要生成文档的类 如 'app\index\controller\index'
