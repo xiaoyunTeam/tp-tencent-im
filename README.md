@@ -1,11 +1,10 @@
 ## xiaoyun/tp-tencent-im
 
 ### 使用方法
-基于腾讯云IM
-##### 云通信（Instant Messaging）承载亿级 QQ 用户即时通信技术，数十年技术积累，腾讯云为您提供超乎寻常即时通信聊天服务。针对开发者的不同阶段需求及不同场景，云通信提供了一系列解决方案，包括： Android/iOS/Windows/Web 的 SDK 组件、服务端集成接口、第三方回调接口等，利用这些组件，可以在应用中构建自己的即时通信产品，解决开发者面临的高并发、高可用性的一系列问题。
+[腾讯云IM](https://cloud.tencent.com/document/product/269)
 
+##### 云通信（Instant Messaging）承载亿级 QQ 用户即时通信技术，数十年技术积累，腾讯云为您提供超乎寻常即时通信聊天服务。
 
-[腾讯云IM传送门](https://cloud.tencent.com/document/product/269)
 #
 #### 1、安装扩展
 ```
@@ -25,7 +24,7 @@ composer require xiaoyun/tp-tencent-im
     ];
     
 ```
-#### 3、默认过期时间
+#### 3、默认过期时间获取签名
 ```
    use XiaoYun\Tencent\IM;
    
@@ -34,12 +33,13 @@ composer require xiaoyun/tp-tencent-im
    return $sign;
 ```
 
-#### 4、指定过期时间
+#### 4、指定过期时间获取签名
 ```
    use XiaoYun\Tencent\IM;
    
    $user = 'xiaoyun02';
-   $sign = IM::genSignWithUserbuf($user);
+   $time = 3600 * 8 * 24;
+   $sign = IM::genSignWithUserbuf($user,$time);
    return $sign;
 ```
 
