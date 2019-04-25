@@ -44,11 +44,6 @@ class IM
         }
     }
 
-    public static function getAccountType()
-    {
-
-    }
-
     /**
      * @return mixed
      */
