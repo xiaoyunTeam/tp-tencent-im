@@ -161,7 +161,7 @@ class IM
         }
         $tools = new SignTools();
         $usersig = $tools->genSign($identifier);  // 管理员帐号生成的签名
-        $random = rand(10000000001000000000100000000000, 99999999999999999999999999999999); // 32位无符号整数
+        $random = $this->getRandom(32); // 32位无符号整数
         $attr = '?sdkappid=' . $sdkappid . '&identifier=' . $identifier . '&usersig=' . $usersig . '&random=' . $random . '&contenttype=' . $contenttype;
         $client = new \GuzzleHttp\Client(['base_uri' => $this->site]);
         return $client->request('POST', '/' . $this->ver . '/' . $servicename . '/' . $command . '/' . $attr, [
@@ -169,4 +169,16 @@ class IM
         ]);
     }
 
+    /*
+     * 获得32位随机数
+     */
+    public function getRandom($param)
+    {
+        $str = '0123456789';
+        $key = '';
+        for ($i = 0; $i < $param; $i++) {
+            $key .= $str{mt_rand(0, 32)};    //生成php随机数
+        }
+        return $key;
+    }
 }

@@ -38,7 +38,7 @@ class OpenIM extends IM
         $data = [
             'From_Account' => $id,
             'To_Account' => $to,
-            'MsgRandom' => rand(1000000, 9999999),
+            'MsgRandom' => $this->getRandom(10),
             'MsgLifeTime' => $lefttime,
             'MsgTimeStamp' => time(),
             'MsgBody' => [
@@ -71,7 +71,7 @@ class OpenIM extends IM
         $data = [
             'From_Account' => $id,
             'To_Account' => $to,
-            'MsgRandom' => rand(1000000, 9999999),
+            'MsgRandom' => $this->getRandom(10),
             'MsgLifeTime' => $lefttime,
             'MsgTimeStamp' => time(),
             'MsgBody' => [
@@ -104,7 +104,7 @@ class OpenIM extends IM
         $data = [
             'From_Account' => $id,
             'To_Account' => $to,
-            'MsgRandom' => rand(1000000, 9999999),
+            'MsgRandom' => $this->getRandom(10),
             'MsgLifeTime' => $lefttime,
             'MsgTimeStamp' => time(),
             'MsgBody' => [

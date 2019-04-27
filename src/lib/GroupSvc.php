@@ -289,7 +289,7 @@ class GroupSvc extends IM
     public function sendGroupMsg($groupid, $id, $body, $priority = null, $offlineinfo = null, $callbackcontrol = false)
     {
         $data['GroupId'] = $groupid;
-        $data['Random'] = rand(10000000000000000000000000000000, 99999999999999999999999999999999);
+        $data['Random'] = $this->getRandom(32);
         $data['MsgBody'] = $body;
         if ($id) {
             $data['From_Account'] = $id;
@@ -428,7 +428,7 @@ class GroupSvc extends IM
             'GroupId' => $groupid,
             'From_Account' => $account,
             'MsgList' => $msglist,
-            'Random' => rand(10000000000000000000000000000000, 99999999999999999999999999999999),
+            'Random' => $this->getRandom(32),
             'SendTime' => $sendtime,
             'MsgBody' => $msgbody,
         ]);
