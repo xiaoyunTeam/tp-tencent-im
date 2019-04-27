@@ -7,9 +7,11 @@
 
 namespace XiaoYun\Tencent;
 
-
+use XiaoYun\Tencent\lib\ConfigSvr;
+use XiaoYun\Tencent\lib\Dirtywords;
+use XiaoYun\Tencent\lib\GroupSvc;
 use XiaoYun\Tencent\lib\LoginSvc;
-use XiaoYun\Tencent\lib\Message;
+use XiaoYun\Tencent\lib\OpenIM;
 use XiaoYun\Tencent\lib\Profile;
 use XiaoYun\Tencent\lib\SignTools;
 use XiaoYun\Tencent\lib\Snsim;
@@ -97,11 +99,13 @@ class IM
     }
 
     /**
-     * 在线状态
+     * 消息发生器
+     * @return OpenIM
+     * @throws \Exception
      */
-    public static function queryState()
+    public static function openim()
     {
-
+        return new OpenIM();
     }
 
     /**
@@ -125,39 +129,59 @@ class IM
     }
 
     /**
-     * 单聊消息
-     * @return Message
+     * 群组管理
+     * @return Snsim
      * @throws \Exception
      */
-    public static function openim()
+    public static function group()
     {
-        return new Message();
+        return new GroupSvc();
+    }
+
+    /**
+     * 脏字管理
+     * @return Snsim
+     * @throws \Exception
+     */
+    public static function dirty()
+    {
+        return new Dirtywords();
+    }
+
+    /**
+     * 运营数管理
+     * @return Snsim
+     * @throws \Exception
+     */
+    public static function configSvr()
+    {
+        return new ConfigSvr();
     }
 
     /**
      * 统一请求HTTPS客户端
-     * @param $uri
-     * @param $query
      * @param $servicename
      * @param $command
+     * @param $query
      * @param string $contenttype
-     * @throws \Exception
+     * @return bool|\Psr\Http\Message\StreamInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function httpsClient($servicename, $command, $query, $contenttype = 'json')
     {
-        if (empty($identifier)) {
-            throw new \Exception('请配置rootAccount管理员账号！');
-        }
         $sdkappid = $this->config['SDKAppid'];
         $identifier = $this->config['rootAccount']; // App 管理员帐号
+        if (empty($sdkappid) or empty($identifier)) {
+            throw new \Exception('请配置rootAccount管理员账号！');
+        }
         $tools = new SignTools();
         $usersig = $tools->genSign($identifier);  // 管理员帐号生成的签名
         $random = rand(10000000001000000000100000000000, 99999999999999999999999999999999); // 32位无符号整数
-        $client = new \Guz | zleHttp\Client(['base_uri' => $this->site]);
-        $response = $client->request('POST', '/' . $servicename . '/' . $command, [
+        $attr = '?sdkappid=' . $sdkappid . '&identifier=' . $identifier . '&usersig=' . $usersig . '&random=' . $random . '&contenttype=' . $contenttype;
+        $client = new \GuzzleHttp\Client(['base_uri' => $this->site]);
+        return $client->request('POST', '/' . $this->ver . '/' . $servicename . '/' . $command . '/' . $attr, [
             'json' => $query
         ]);
-
     }
 
 }
