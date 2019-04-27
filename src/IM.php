@@ -83,7 +83,7 @@ class IM
      * @return SignTools
      * @throws \Exception
      */
-    public static function sign()
+    public static function signSvc()
     {
         return new SignTools();
     }
