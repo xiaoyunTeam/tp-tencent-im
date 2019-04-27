@@ -163,10 +163,12 @@ class IM
         $usersig = $tools->genSign($identifier);  // 管理员帐号生成的签名
         $random = $this->getRandom(32); // 32位无符号整数
         $attr = '?sdkappid=' . $sdkappid . '&identifier=' . $identifier . '&usersig=' . $usersig . '&random=' . $random . '&contenttype=' . $contenttype;
+        $uri = '/' . $this->ver . '/' . $servicename . '/' . $command . '/' . $attr;
         $client = new \GuzzleHttp\Client(['base_uri' => $this->site]);
-        return $client->request('POST', '/' . $this->ver . '/' . $servicename . '/' . $command . '/' . $attr, [
+        $result = $client->request('POST', $uri, [
             'json' => $query
         ]);
+        return (String)$result->getBody();
     }
 
     /*
@@ -174,10 +176,9 @@ class IM
      */
     public function getRandom($param)
     {
-        $str = '0123456789';
         $key = '';
         for ($i = 0; $i < $param; $i++) {
-            $key .= $str{mt_rand(0, 32)};    //生成php随机数
+            $key .= rand(1, 9);    //生成php随机数
         }
         return $key;
     }
