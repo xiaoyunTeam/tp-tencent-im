@@ -64,21 +64,6 @@ class IM
     }
 
     /**
-     * 获取配置详情
-     * @param $name
-     * @return array|mixed
-     */
-    public static function getConfig($name)
-    {
-        if (!defined('THINK_VERSION')) {
-            $config = (array)\think\facade\Config::pull('im');
-        } else {
-            $config = (array)\think\Config::get('im');
-        }
-        return $name ? $config[$name] : $config;
-    }
-
-    /**
      * 签名工具
      * @return SignTools
      * @throws \Exception

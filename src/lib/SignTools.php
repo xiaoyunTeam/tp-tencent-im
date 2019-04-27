@@ -28,8 +28,8 @@ class SignTools extends IM
             'TLS.userbuf' => base64_encode($userbuf)
         );
         $err = '';
-        $content = self::genSignnContentWithUserbuf($json, $err);
-        $signature = self::sign($content, $err);
+        $content = $this->genSignnContentWithUserbuf($json, $err);
+        $signature = $this->sign($content, $err);
         $json['TLS.sig'] = base64_encode($signature);
         if ($json['TLS.sig'] === false) {
             throw new \Exception('base64_encode error');
@@ -51,7 +51,7 @@ class SignTools extends IM
      * @return string 按标准格式生成的用于签名的字符串
      * 失败时返回false
      */
-    private static function genSignnContentWithUserbuf(array $json)
+    private function genSignnContentWithUserbuf(array $json)
     {
         static $members = Array(
             'TLS.appid_at_3rd',
@@ -77,10 +77,10 @@ class SignTools extends IM
      * @param string $data 需要签名的数据
      * @return string 返回签名 失败时返回false
      */
-    private static function sign($data)
+    private function sign($data)
     {
         $signature = '';
-        if (!openssl_sign($data, $signature, self::getConfig('private_key'), 'sha256')) {
+        if (!openssl_sign($data, $signature, $this->config['private_key'], 'sha256')) {
             throw new \Exception(openssl_error_string());
         }
         return $signature;
@@ -92,7 +92,7 @@ class SignTools extends IM
      * @param string $string 需要编码的数据
      * @return string 编码后的base64串，失败返回false
      */
-    private static function base64Encode($string)
+    private function base64Encode($string)
     {
         static $replace = Array('+' => '*', '/' => '-', '=' => '_');
         $base64 = base64_encode($string);
@@ -156,7 +156,7 @@ class SignTools extends IM
      * @param string $base64 需要解码的base64串
      * @return string 解码后的数据，失败返回false
      */
-    private static function base64Decode($base64)
+    private function base64Decode($base64)
     {
         static $replace = Array('+' => '*', '/' => '-', '=' => '_');
         $string = str_replace(array_values($replace), array_keys($replace), $base64);
@@ -173,9 +173,9 @@ class SignTools extends IM
      * @param string $sig 需要验证的签名
      * @return int 1验证成功 0验证失败
      */
-    private static function verify($data, $sig)
+    private function verify($data, $sig)
     {
-        $ret = openssl_verify($data, $sig, self::getConfig('public_key'), 'sha256');
+        $ret = openssl_verify($data, $sig, $this->config['public_key'], 'sha256');
         if ($ret == -1) {
             throw new \Exception(openssl_error_string());
         }
